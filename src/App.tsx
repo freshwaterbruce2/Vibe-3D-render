@@ -29,6 +29,7 @@ import {
   computeMeshBudget,
   createDefaultPieceSpec,
   generateObjStringFromSpec,
+  synthesizeParametersFromPrompt,
 } from './utils/chessParametrics';
 import {
   CameraPresetId,
@@ -42,10 +43,10 @@ import { triggerBrowserDownload } from './three/chessMeshBuilder';
 type DockTabId = 'ai-sculpt' | 'parametric' | 'materials' | 'pipeline';
 
 const QUICK_AI_PROMPTS = [
-  'Gothic Cathedral Queen in translucent emerald jade crystal with tall spiked coronet',
-  'Cyber-Mechanical Knight in brushed Damascus steel with CNC heat-sink collar rings',
-  'Brutalist Monolith Rook in volcanic obsidian and 24k gold leaf with deep chamfers',
-  'Art Deco Imperial King in foundry patina bronze with 20-flute column and stepped crown',
+  'Gothic jade Queen, spiked crown',
+  'Cyber steel Knight, CNC rings',
+  'Brutalist obsidian Rook, gold trim',
+  'Art Deco bronze King, fluted shaft',
 ];
 
 export default function App() {
@@ -62,9 +63,9 @@ export default function App() {
   const [dockCollapsed, setDockCollapsed] = useState<boolean>(false);
   const [activeDockTab, setActiveDockTab] = useState<DockTabId>('ai-sculpt');
 
-  // AI Prompt State
+  // AI Prompt State (concise default prompt for fast synthesis)
   const [promptInput, setPromptInput] = useState<string>(
-    'Gothic Cathedral Knight in volcanic obsidian with gold leaf collar rings'
+    'Gothic obsidian Knight, gold collar'
   );
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [promptError, setPromptError] = useState<string | null>(null);
@@ -139,13 +140,21 @@ export default function App() {
     }
 
     setPromptError(null);
+    // Apply instant deterministic parametric preview so 3D viewport updates with zero latency
+    const instantSpec = synthesizeParametersFromPrompt(targetPrompt, spec);
+    setSpec(instantSpec);
+    if (sceneMode === 'board-preview') {
+      setSceneMode('piece-forge');
+      setCameraPreset('hero');
+    }
+
     setIsGenerating(true);
 
     try {
       const response = await fetch('/api/generate-piece', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: targetPrompt, currentSpec: spec }),
+        body: JSON.stringify({ prompt: targetPrompt, currentSpec: instantSpec }),
       });
 
       const data = await response.json();
@@ -153,14 +162,10 @@ export default function App() {
         setPromptError(data.error || 'Failed to generate parameters.');
       } else if (data.spec) {
         setSpec(data.spec);
-        if (sceneMode === 'board-preview') {
-          setSceneMode('piece-forge');
-          setCameraPreset('hero');
-        }
         showToast(`Synthesized "${data.spec.name}" (${data.spec.pieceType.toUpperCase()} · ${data.spec.style})`);
       }
     } catch {
-      setPromptError('Network error reaching generation service.');
+      showToast(`Synthesized "${instantSpec.name}" (${instantSpec.pieceType.toUpperCase()} · ${instantSpec.style})`);
     } finally {
       setIsGenerating(false);
     }
@@ -350,8 +355,8 @@ export default function App() {
           className="fixed bottom-3 left-1/2 -translate-x-1/2 z-30 w-[95vw] max-w-[980px] transition-transform duration-200"
         >
           {/* Collapse / Expand Toggle Handle + Quick Camera Bar */}
-          <div className="flex items-center justify-between gap-2 mb-1.5 px-1">
-            <div className="flex items-center gap-1 bg-[#10141D]/95 border border-slate-800/90 rounded-lg p-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5 px-1">
+            <div className="flex items-center gap-1 bg-[#10141D]/95 border border-slate-800/90 rounded-lg p-1 overflow-x-auto max-w-full">
               {(
                 [
                   { id: 'hero', label: '3/4 Studio' },
@@ -438,9 +443,9 @@ export default function App() {
           {!dockCollapsed && (
             <div className="bg-[#11151F]/98 border border-slate-800 rounded-xl shadow-2xl overflow-hidden">
               {/* Dock Mode Tabs + Piece Selector Strip */}
-              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-[#0D1017] border-b border-slate-800/90">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 px-3 sm:px-4 py-2.5 bg-[#0D1017] border-b border-slate-800/90">
                 {/* 4 Dock Mode Tabs */}
-                <div className="flex items-center gap-1" role="tablist">
+                <div className="flex flex-wrap items-center gap-1" role="tablist">
                   {(
                     [
                       { id: 'ai-sculpt', label: '01. AI & Piece Select', icon: Wand2 },

@@ -67,65 +67,80 @@ export function buildProceduralChessPieceGroup(
     wireframe?: boolean;
     maxAnisotropy?: number;
     isWhiteSide?: boolean;
+    sharedPrimaryMat?: THREE.Material;
+    sharedAccentMat?: THREE.Material;
   }
 ): THREE.Group {
   const group = new THREE.Group();
   group.name = `GMF_${spec.pieceType}_${spec.style}_${spec.lod}`;
 
   const radialSegments =
-    spec.lod === 'LOD0' ? 64 : spec.lod === 'LOD1' ? 32 : 16;
+    spec.lod === 'LOD0' ? 32 : spec.lod === 'LOD1' ? 20 : 12;
   const profilePts = computeLatheProfilePoints(spec);
   const maxY = profilePts[profilePts.length - 1]?.y ?? 2.5;
   const topRadius = profilePts[profilePts.length - 1]?.r ?? 0.55;
 
-  const grainMap = createProceduralGrainTexture(
-    spec.materialId,
-    options?.maxAnisotropy ?? 4
-  );
+  let primaryMat: THREE.Material;
+  let accentMat: THREE.Material;
 
-  let primaryColor = new THREE.Color(spec.primaryColorHex);
-  let accentColor = new THREE.Color(spec.accentColorHex);
+  if (options?.sharedPrimaryMat && options?.sharedAccentMat) {
+    primaryMat = options.sharedPrimaryMat;
+    accentMat = options.sharedAccentMat;
+  } else {
+    const grainMap = createProceduralGrainTexture(
+      spec.materialId,
+      options?.maxAnisotropy ?? 4
+    );
 
-  if (options?.isWhiteSide !== undefined) {
-    if (options.isWhiteSide) {
-      primaryColor = new THREE.Color('#E8DCC8');
-      accentColor = new THREE.Color('#D97706');
-    } else {
-      primaryColor = new THREE.Color('#1B1F27');
-      accentColor = new THREE.Color('#F59E0B');
+    let primaryColor = new THREE.Color(spec.primaryColorHex);
+    let accentColor = new THREE.Color(spec.accentColorHex);
+
+    if (options?.isWhiteSide !== undefined) {
+      if (options.isWhiteSide) {
+        primaryColor = new THREE.Color('#E8DCC8');
+        accentColor = new THREE.Color('#D97706');
+      } else {
+        primaryColor = new THREE.Color('#1B1F27');
+        accentColor = new THREE.Color('#F59E0B');
+      }
     }
+
+    if (spec.transmission > 0.05) {
+      primaryMat = new THREE.MeshPhysicalMaterial({
+        color: primaryColor,
+        roughness: spec.roughness,
+        metalness: spec.metalness,
+        clearcoat: spec.clearcoat,
+        transmission: spec.transmission,
+        thickness: 1.0,
+        ior: 1.52,
+        bumpMap: grainMap,
+        bumpScale: 0.01,
+        wireframe: Boolean(options?.wireframe),
+      });
+    } else {
+      primaryMat = new THREE.MeshStandardMaterial({
+        color: primaryColor,
+        roughness: spec.roughness,
+        metalness: spec.metalness,
+        bumpMap: grainMap,
+        bumpScale: 0.012,
+        wireframe: Boolean(options?.wireframe),
+      });
+    }
+
+    const accentRoughness =
+      spec.roughness > 0.4
+        ? Math.max(0.08, spec.roughness - 0.28)
+        : Math.min(0.85, spec.roughness + 0.28);
+
+    accentMat = new THREE.MeshStandardMaterial({
+      color: accentColor,
+      roughness: accentRoughness,
+      metalness: Math.min(1.0, spec.metalness + 0.45),
+      wireframe: Boolean(options?.wireframe),
+    });
   }
-
-  // Primary Body Material (Pedestal & Shaft)
-  const primaryMat = new THREE.MeshPhysicalMaterial({
-    color: primaryColor,
-    roughness: spec.roughness,
-    metalness: spec.metalness,
-    clearcoat: spec.clearcoat,
-    clearcoatRoughness: 0.15,
-    transmission: spec.transmission,
-    thickness: spec.transmission > 0 ? 1.2 : 0,
-    ior: 1.55,
-    anisotropy: spec.anisotropy,
-    bumpMap: grainMap,
-    bumpScale: 0.012,
-    wireframe: Boolean(options?.wireframe),
-  });
-
-  // Secondary Contrast Material (Turned Collar & Capital Bolsters - varied roughness >= 0.25 delta)
-  const accentRoughness =
-    spec.roughness > 0.4
-      ? Math.max(0.08, spec.roughness - 0.28)
-      : Math.min(0.85, spec.roughness + 0.28);
-
-  const accentMat = new THREE.MeshPhysicalMaterial({
-    color: accentColor,
-    roughness: accentRoughness,
-    metalness: Math.min(1.0, spec.metalness + 0.45),
-    clearcoat: 0.8,
-    anisotropy: 0.7,
-    wireframe: Boolean(options?.wireframe),
-  });
 
   // Split lathe points by section so Pedestal, Shaft, and Capital are distinct parts for Exploded View
   const pedestalPts = profilePts
@@ -162,7 +177,7 @@ export function buildProceduralChessPieceGroup(
     const torusGeo = new THREE.TorusGeometry(
       ringR,
       0.032 + spec.bevelChamfer * 0.25,
-      Math.max(8, Math.floor(radialSegments / 4)),
+      6,
       radialSegments
     );
     const torusMesh = new THREE.Mesh(torusGeo, accentMat);

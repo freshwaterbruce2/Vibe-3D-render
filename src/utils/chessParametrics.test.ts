@@ -28,7 +28,13 @@ test('createDefaultPieceSpec creates grounded tournament proportions for all 6 p
   }
 });
 
-test('computeMeshBudget enforces strict polygon reduction across LOD0 > LOD1 > LOD2', () => {
+test('computeMeshBudget enforces strict polygon reduction across LOD0 > LOD1 > LOD2 and keeps LOD0 under 3,500 tris', () => {
+  const knightLod0 = computeMeshBudget(createDefaultPieceSpec('knight', 'staunton', 'obsidian', 'LOD0'));
+  assert.ok(
+    knightLod0.triangleCount < 3500,
+    `Expected Staunton Knight LOD0 (${knightLod0.triangleCount}) to be reduced below 3,500 triangles`
+  );
+
   const lod0 = computeMeshBudget(createDefaultPieceSpec('queen', 'gothic', 'jade', 'LOD0'));
   const lod1 = computeMeshBudget(createDefaultPieceSpec('queen', 'gothic', 'jade', 'LOD1'));
   const lod2 = computeMeshBudget(createDefaultPieceSpec('queen', 'gothic', 'jade', 'LOD2'));

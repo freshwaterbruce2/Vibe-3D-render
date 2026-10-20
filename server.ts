@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import dotenv from 'dotenv';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import {
   ChessPieceSpec,
   createDefaultPieceSpec,
@@ -55,17 +55,11 @@ async function startServer() {
 
       const response = await ai.models.generateContent({
         model: 'gemini-3.8-flash',
-        contents: `Design a high-detail 3D chess piece specification based on this user request: "${prompt}".
-Current piece context: ${JSON.stringify({
-          pieceType: baseSpec.pieceType,
-          style: baseSpec.style,
-          materialId: baseSpec.materialId,
-          lod: baseSpec.lod,
-        })}.
-Return calibrated 3D parametric modeling values and PBR material properties.`,
+        contents: `Design a 3D chess piece spec for: "${prompt.slice(0, 120)}".`,
         config: {
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           systemInstruction:
-            'You are a Senior 3D Technical Artist and Geometry Pipeline Architect specializing in procedural chess piece design for Blender, Unity, and Unreal Engine 5. Output strictly valid JSON matching the schema.',
+            'You are a Senior 3D Technical Artist specializing in procedural chess piece design for Blender, Unity, and Unreal Engine 5. Output strictly valid JSON matching the schema.',
           responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,

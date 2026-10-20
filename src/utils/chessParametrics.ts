@@ -414,7 +414,7 @@ export function computeLatheProfilePoints(spec: ChessPieceSpec): ProfilePoint2D[
   // 3. Column / Shaft with hyperbolic waist curve
   const shaftStartY = H * 0.28;
   const shaftEndY = H * 0.66;
-  const shaftSteps = spec.lod === 'LOD0' ? 12 : spec.lod === 'LOD1' ? 8 : 5;
+  const shaftSteps = spec.lod === 'LOD0' ? 6 : spec.lod === 'LOD1' ? 4 : 3;
   for (let s = 0; s <= shaftSteps; s++) {
     const u = s / shaftSteps;
     const y = shaftStartY + u * (shaftEndY - shaftStartY);
@@ -449,7 +449,7 @@ export function computeLatheProfilePoints(spec: ChessPieceSpec): ProfilePoint2D[
  */
 export function computeMeshBudget(spec: ChessPieceSpec): MeshBudgetMetrics {
   const radialSegments =
-    spec.lod === 'LOD0' ? 64 : spec.lod === 'LOD1' ? 32 : 16;
+    spec.lod === 'LOD0' ? 32 : spec.lod === 'LOD1' ? 20 : 12;
   const profilePts = computeLatheProfilePoints(spec);
   const verticalSteps = profilePts.length;
 
@@ -459,25 +459,25 @@ export function computeMeshBudget(spec: ChessPieceSpec): MeshBudgetMetrics {
 
   // Additional procedural sub-meshes (Collar rings, Fluting ribs, Crown / Knight head / Mitre / Battlements)
   const fluteCount = spec.flutingDepth > 0.01 ? spec.flutingCount : 0;
-  const fluteSegs = spec.lod === 'LOD0' ? 16 : spec.lod === 'LOD1' ? 10 : 6;
+  const fluteSegs = spec.lod === 'LOD0' ? 8 : spec.lod === 'LOD1' ? 6 : 4;
   const fluteTris = fluteCount * fluteSegs * 4;
 
   const pieceHeadComplexity: Record<ChessPieceType, number> = {
-    king: 960,
-    queen: 880,
-    knight: 1420,
-    bishop: 640,
-    rook: 520,
-    pawn: 360,
+    king: 380,
+    queen: 340,
+    knight: 520,
+    bishop: 260,
+    rook: 220,
+    pawn: 160,
   };
-  const lodMultiplier = spec.lod === 'LOD0' ? 1.0 : spec.lod === 'LOD1' ? 0.48 : 0.22;
+  const lodMultiplier = spec.lod === 'LOD0' ? 1.0 : spec.lod === 'LOD1' ? 0.55 : 0.28;
   const headTris = Math.round(
-    (pieceHeadComplexity[spec.pieceType] + spec.crownPoints * 48) * lodMultiplier
+    (pieceHeadComplexity[spec.pieceType] + spec.crownPoints * 24) * lodMultiplier
   );
 
-  const collarTris = spec.collarRings * radialSegments * 4;
+  const collarTris = spec.collarRings * radialSegments * 2;
   const totalTriangles = latheTris + fluteTris + headTris + collarTris;
-  const totalVertices = Math.round(totalTriangles * 0.56) + latheVerts;
+  const totalVertices = Math.round(totalTriangles * 0.54) + latheVerts;
 
   const subMeshParts =
     5 + (fluteCount > 0 ? 1 : 0) + (spec.pieceType === 'knight' || spec.pieceType === 'king' ? 2 : 1);
