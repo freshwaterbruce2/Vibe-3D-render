@@ -1,0 +1,6 @@
+{
+  "name": "Grandmaster Forge — 3D Chess Asset & Pipeline Studio",
+  "description": "Generative 3D chess piece modeling, PBR material studio, cross-platform Rust/Python/C#/C++ pipeline architecture, and direct GLB/OBJ export for Blender, Unity, and Unreal Engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
